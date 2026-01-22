@@ -37,3 +37,37 @@ pub fn handleInstall(package: []const u8, packageName: []const u8) !void {
     }
 }
 
+pub fn buildPackage(packageName: []const u8) !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var externalDir = try std.fs.cwd().openDir(
+        "cpkgExternal",
+        .{.access_sub_paths = true},
+    );
+
+    defer externalDir.close();
+
+    var buildTarget = try std.fs.cwd().openDir(
+        packageName,
+        .{},
+    );
+    defer buildTarget.close();
+    try buildTarget.makeDir("build");
+    var child = std.process.Child.init(
+        &[_][]const u8{
+            "cmake",
+            "..",
+            "&&",
+            "make",
+        },
+        allocator
+    );
+    child.cwd_dir = buildTarget;
+    const term = try child.spawnAndWait();
+    if (term != .Exited or term.Exited != 0) {
+        return error.cmake;
+    }
+}
+

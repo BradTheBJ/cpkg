@@ -44,30 +44,44 @@ pub fn buildPackage(packageName: []const u8) !void {
 
     var externalDir = try std.fs.cwd().openDir(
         "cpkgExternal",
-        .{.access_sub_paths = true},
+        .{ .access_sub_paths = true },
     );
-
     defer externalDir.close();
 
-    var buildTarget = try std.fs.cwd().openDir(
+    var packageDir = try externalDir.openDir(
         packageName,
-        .{},
+        .{ .access_sub_paths = true },
     );
-    defer buildTarget.close();
-    try buildTarget.makeDir("build");
-    var child = std.process.Child.init(
+    defer packageDir.close();
+
+    var configure = std.process.Child.init(
         &[_][]const u8{
             "cmake",
-            "..",
-            "&&",
-            "make",
+            "-S", ".",
+            "-B", "build",
         },
-        allocator
+        allocator,
     );
-    child.cwd_dir = buildTarget;
-    const term = try child.spawnAndWait();
-    if (term != .Exited or term.Exited != 0) {
-        return error.cmake;
+    configure.cwd_dir = packageDir;
+
+    const cterm = try configure.spawnAndWait();
+    if (cterm != .Exited or cterm.Exited != 0) {
+        return error.CMakeConfigureFailed;
+    }
+
+    var build = std.process.Child.init(
+        &[_][]const u8{
+            "cmake",
+            "--build", "build",
+        },
+        allocator,
+    );
+    build.cwd_dir = packageDir;
+
+    const bterm = try build.spawnAndWait();
+    if (bterm != .Exited or bterm.Exited != 0) {
+        return error.CMakeBuildFailed;
     }
 }
+
 

@@ -23,6 +23,8 @@ pub fn handleInstall(package: []const u8, packageName: []const u8) !void {
         &[_][]const u8{
             "git",
             "clone",
+            "--depth",
+            "1",
             package,
             ".",
         },

@@ -1,5 +1,5 @@
 const std = @import("std");
-const handleInput = @import("handleInput.zig");
+const handleInput = @import("methods/handleInput.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};

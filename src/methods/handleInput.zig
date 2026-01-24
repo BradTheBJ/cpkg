@@ -1,6 +1,7 @@
 const std = @import("std");
-const handleInstall = @import("handleInstall.zig");
+const  installPackage = @import("installPackage.zig");
 const cpkgInit = @import("cpkgInit.zig");
+const buildPackage = @import("buildPackage.zig");
 
 //TODO: Refactor the input system so its easier to expand
 
@@ -14,7 +15,7 @@ pub fn handleInput(args: []const []const u8) !void {
         try cpkgInit.cpkgInit();
     }
     if (std.mem.eql(u8, args[1], "install")) {
-        try handleInstall.handleInstall(args[2], args[3]);
-        try handleInstall.buildPackage(args[3]);
+        try installPackage.installPackage(args[2], args[3]);
+        try buildPackage.buildPackage(args[3]);
     }
 }

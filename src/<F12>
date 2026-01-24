@@ -19,7 +19,7 @@ pub fn buildPackage(packageName: []const u8) !void {
     var configureCmakeNinja = std.process.Child.init(&[_][]const u8{
         "cmake",
         "-S", ".",
-        "-B", "build-ninja",
+        "-B", "build",
         "-G", "Ninja",
     }, allocator);
     configureCmakeNinja.cwd_dir = packageDir;
@@ -28,12 +28,15 @@ pub fn buildPackage(packageName: []const u8) !void {
 
     if (cterm.Exited != 0) {
         while (true) {
-            std.debug.print("Ninja not found, continue with CMake build(this will be significantly slower than Ninja)? [Y/N] ", .{});
+            std.debug.print("Ninja not found, continue with CMake build? [Y/N] ", .{});
 
             const cStr: [*c]u8 = c.readLine();
 
             const len_usize: usize = @intCast(c.strlen(cStr));
-            if (len_usize > std.math.maxInt(u8)) continue;
+            if (len_usize > std.math.maxInt(u8)) {
+                std.debug.print("Input too long\n", .{});
+                continue;
+            }
             const len: u8 = @intCast(len_usize);
 
             var inputLine: []u8 = cStr[0..@as(usize, len)];
@@ -42,31 +45,33 @@ pub fn buildPackage(packageName: []const u8) !void {
                 inputLine = inputLine[0..@as(usize, len - 1)];
             }
 
-            for (inputLine) |*ch| {
-                ch.* = std.ascii.toLower(ch.*);
+            for (inputLine) |u8| {
+                c.* = std.ascii.toLower(c.*);
+            }
+
+
+            if (std.mem.eql(u8, inputLine, "y") or std.mem.eql(u8, inputLine, "yes")) {
+                var fallback_cfg = std.process.Child.init(&[_][]const u8{
+                    "cmake",
+                    "-S", ".",
+                    "-B", "build",
+                }, allocator);
+                fallback_cfg.cwd_dir = packageDir;
+                _ = try fallback_cfg.spawnAndWait();
+                break;
             }
 
             if (std.mem.eql(u8, inputLine, "n") or std.mem.eql(u8, inputLine, "no")) {
                 return error.NinjaNotFound;
             }
 
-            if (std.mem.eql(u8, inputLine, "y") or std.mem.eql(u8, inputLine, "yes")) {
-                var fallbackConfigure = std.process.Child.init(&[_][]const u8{
-                    "cmake",
-                    "-S", ".",
-                    "-B", "build-cmake",
-                }, allocator);
-                fallbackConfigure.cwd_dir = packageDir;
-                _ = try fallbackConfigure.spawnAndWait();
-                break;
-            }
+            std.debug.print("Invalid input, please enter 'y' or 'n'.\n", .{});
         }
     }
 
     var build = std.process.Child.init(&[_][]const u8{
         "cmake",
-        "--build",
-        if (cterm.Exited == 0) "build-ninja" else "build-cmake",
+        "--build", "build",
     }, allocator);
     build.cwd_dir = packageDir;
 
